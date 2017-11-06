@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+
+const cli = require('commander');
+const { version } = require('../package.json');
+const { parseYAML } = require('../lib/compose');
+const { write: writeToTerminal } = require('../lib/terminal');
+
+
+cli.alias('p')
+  .version(version)
+  .usage('parse <docker-compose file>')
+  .description('Read a YAML file and return a JSON string representing the YAML data')
+  .action((composeFile) => {
+    const newBlob = JSON.stringify(parseYAML(composeFile));
+
+    console.log(writeToTerminal(newBlob)); // eslint-disable-line no-console
+  })
+  .parse(process.argv);

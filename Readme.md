@@ -30,6 +30,30 @@ That is what this tool will be used for.
 
 I wrote this tool for my specific need and might not work for everyone, I make no claims that it will join the compose files correctly across all versions of the file format just that it works for me and will be updated only when it stops working or abandoned if no longer required.
 
+## Usage
+
+You can use this tool either as a module imported into your Node script _or_ via its command line interface (CLI).
+
+### CLI
+
+This tool has a command line interface to trigger the docker-compose editing via a bash script.
+The idea for me is that I can add a bash script command to my CI job to create my new one docker-compose file to rule them all on the fly.
+
+The CLI is broken out into sub commands which either take a path to the YAMl file or the json blob.
+
+```
+compose-joiner [parse|update|remove] <path to compose file | json blob of compose file data>
+```
+
+**Example**
+```
+> compose-joiner parse docker-compose.base-infrastructure.yml
+  | xargs compose-joiner remove nginx
+  | xargs compose-joiner remove dns-service
+  | xargs compose-joiner join docker-compose.micro-service1.yml
+  | xargs compose-joiner save docker-compose.master.yml
+```
+
 ## Running Tests
 
 To run the tests suite use the `npm test` command.

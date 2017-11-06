@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+
+const cli = require('commander');
+const { version } = require('../package.json');
+const { removeService } = require('../lib/compose');
+
+
+cli.alias('r')
+  .version(version)
+  .usage('remove <service-name> <docker-compose json>')
+  .description('Removes the service from the JSON blob')
+  .action((serviceName, composeData) => {
+    const json = JSON.parse(composeData.replace(/'/g, '"'));
+    const newBlob = JSON.stringify(removeService(json, serviceName));
+
+    console.log(`"${newBlob.replace(/"/g, '\'')}"`); // eslint-disable-line no-console
+  })
+  .parse(process.argv);

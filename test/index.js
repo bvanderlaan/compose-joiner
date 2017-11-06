@@ -18,6 +18,7 @@ const {
   saveYAML,
   update,
 } = require('../lib/compose');
+const terminal = require('../lib/terminal');
 
 chai.use(sinonChai);
 const { expect } = chai;
@@ -494,6 +495,22 @@ describe('Joiner', () => {
             ports:
               - 200
               - 80` + '\n');
+    });
+  });
+
+  describe('Terminal', () => {
+    describe('Read', () => {
+      it('should replace single quotes with double quotes', () => {
+        expect(terminal.read("{'services':{'nginx':{'name':'hello'}}}"))
+          .to.equals('{"services":{"nginx":{"name":"hello"}}}');
+      });
+    });
+
+    describe('Write', () => {
+      it('should replace double quotes with single quotes and wrap in double quotes', () => {
+        expect(terminal.write('{"services":{"nginx":{"name":"hello"}}}'))
+          .to.equals(`"{'services':{'nginx':{'name':'hello'}}}"`);
+      });
     });
   });
 });

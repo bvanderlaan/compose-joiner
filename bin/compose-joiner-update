@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+
+const cli = require('commander');
+const { version } = require('../package.json');
+const { parseYAML, update } = require('../lib/compose');
+const { write: writeToTerminal } = require('../lib/terminal');
+
+
+cli.alias('u')
+  .version(version)
+  .usage('update <docker-compose file> <version>')
+  .description('Update a compose file to later version')
+  .action((composeFile, fileVersion) => {
+    const v = Number.parseFloat(fileVersion);
+    if (Number.isNaN(v)) {
+      console.error('Error: Version must be a number'); // eslint-disable-line no-console
+      process.exit(-1);
+    }
+
+    const newBlob = JSON.stringify(update(parseYAML(composeFile), fileVersion));
+
+    console.log(writeToTerminal(newBlob)); // eslint-disable-line no-console
+  })
+  .parse(process.argv);
