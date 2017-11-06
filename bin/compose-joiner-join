@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+const cli = require('commander');
+const { version } = require('../package.json');
+const { join, parseYAML } = require('../lib/compose');
+const { read: readFromTerminal, write: writeToTerminal } = require('../lib/terminal');
+
+function readComposeFile(composeFile) {
+  try {
+    return parseYAML(composeFile);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error(`Error: Failed to parse docker-compose file: ${e.message}`);
+    return process.exit(-1);
+  }
+}
+
+function readComposeData(composeData) {
+  if (!composeData.includes('{')) {
+    return readComposeFile(composeData);
+  }
+
+  try {
+    return JSON.parse(readFromTerminal(composeData));
+  } catch (e) {
+    console.error(`Error: Failed to parse docker-compose data: ${e.message}`); // eslint-disable-line no-console
+    return process.exit(-1);
+  }
+}
+
+cli.alias('j')
+  .version(version)
+  .usage('join <docker-compose file A> <docker-compose file B | compose json>')
+  .description('Joins two docker-compose files')
+  .action((composeFile, composeData) => {
+    const blobA = readComposeFile(composeFile);
+    const blobB = readComposeData(composeData);
+
+    const newBlob = join(blobA, blobB);
+    console.log(writeToTerminal(JSON.stringify(newBlob))); // eslint-disable-line no-console
+  })
+  .parse(process.argv);
