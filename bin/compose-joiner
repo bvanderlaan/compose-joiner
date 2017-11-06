@@ -9,4 +9,5 @@ cli.alias('cj')
   .command('parse <docker-compose file>', 'Read a YAML file and return a JSON string')
   .command('update <docker-compose file>', 'Update a compose file to later version')
   .command('remove <service-name> <compose json>', 'Removes the service from the compose JSON data')
+  .command('save <file name> <compose json>', 'Saves out the JSON data to YAML')
   .parse(process.argv);

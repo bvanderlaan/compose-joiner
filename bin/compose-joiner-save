@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+
+const cli = require('commander');
+const path = require('path');
+const { version } = require('../package.json');
+const { saveYAML } = require('../lib/compose');
+const { read: readFromTerminal } = require('../lib/terminal');
+
+
+cli.alias('s')
+  .version(version)
+  .usage('save <file name>  <docker-compose json>')
+  .description('Saves the JSON data as a YAML file')
+  .action((output, composeData) => {
+    try {
+      const blob = JSON.parse(readFromTerminal(composeData));
+      saveYAML(blob, output);
+    } catch (e) {
+      console.error(`Error: Failed to save docker-compose file: ${e.message}`); // eslint-disable-line no-console
+      process.exit(-1);
+    }
+
+    console.log(`Success: docker-compose file saved here: ${path.resolve(output)}`); // eslint-disable-line no-console
+  })
+  .parse(process.argv);
