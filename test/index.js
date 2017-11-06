@@ -509,7 +509,7 @@ describe('Joiner', () => {
     describe('Write', () => {
       it('should replace double quotes with single quotes and wrap in double quotes', () => {
         expect(terminal.write('{"services":{"nginx":{"name":"hello"}}}'))
-          .to.equals(`"{'services':{'nginx':{'name':'hello'}}}"`);
+          .to.equals('"{\'services\':{\'nginx\':{\'name\':\'hello\'}}}"');
       });
     });
   });
