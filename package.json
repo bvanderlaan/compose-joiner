@@ -17,7 +17,11 @@
     "docker-compose"
   ],
   "author": "Brad van der Laan",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bvanderlaan/compose-joiner"
+  },
   "dependencies": {
     "commander": "^2.11.0",
     "yamljs": "^0.3.0"

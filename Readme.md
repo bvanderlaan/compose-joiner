@@ -67,4 +67,4 @@ Bug reports and pull requests are welcome. This project is intended to be a safe
 
 ## License
 
-The tool is available as open source under the terms of the [ISC License](https://choosealicense.com/licenses/isc/).
+The tool is available as open source under the terms of the [MIT License](https://choosealicense.com/licenses/mit/).
