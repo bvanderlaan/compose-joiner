@@ -202,6 +202,26 @@ describe('Joiner', () => {
   });
 
   describe('Remove Service', () => {
+    describe('when version 1', () => {
+      before(() => sinon.stub(yaml, 'load').returns({
+        myService: {
+          name: 'hello',
+        },
+        myOtherService: {
+          name: 'world',
+        },
+      }));
+      after(() => yaml.load.restore());
+
+      it('should remove unwanted service', () => {
+        expect(removeService(parseYAML('myYAMLFile.yml'), 'myOtherService')).to.deep.equals({
+          myService: {
+            name: 'hello',
+          },
+        });
+      });
+    });
+
     describe('when has no services', () => {
       before(() => sinon.stub(yaml, 'load').returns({
         version: '2',
