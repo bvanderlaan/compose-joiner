@@ -3,6 +3,7 @@
 const cli = require('commander');
 const { version } = require('../package.json');
 const { removeService } = require('../lib/compose');
+const { read: readFromTerminal, write: writeToTerminal } = require('../lib/terminal');
 
 
 cli.alias('r')
@@ -10,9 +11,15 @@ cli.alias('r')
   .usage('remove <service-name> <docker-compose json>')
   .description('Removes the service from the JSON blob')
   .action((serviceName, composeData) => {
-    const json = JSON.parse(composeData.replace(/'/g, '"'));
-    const newBlob = JSON.stringify(removeService(json, serviceName));
+    try {
+      const json = JSON.parse(readFromTerminal(composeData));
+      const newBlob = JSON.stringify(removeService(json, serviceName));
 
-    console.log(`"${newBlob.replace(/"/g, '\'')}"`); // eslint-disable-line no-console
+      console.log(writeToTerminal(newBlob)); // eslint-disable-line no-console
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`Error: Failed to read docker-compose data: ${e.message}`);
+      process.exit(-1);
+    }
   })
   .parse(process.argv);
