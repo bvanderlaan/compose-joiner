@@ -10,5 +10,6 @@ cli.alias('cj')
   .command('update <docker-compose file>', 'Update a compose file to later version')
   .command('remove <service-name> <compose json>', 'Removes the service from the compose JSON data')
   .command('save <file name> <compose json>', 'Saves out the JSON data to YAML')
+  .command('property <service-name> <property> <compose json>', 'Get and Modify properties of a service')
   .command('join <docker-compose file A> <docker-compose file B | compose json>', 'Joins two docker-compose files')
   .parse(process.argv);

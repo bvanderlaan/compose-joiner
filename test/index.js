@@ -15,6 +15,7 @@ const {
   join,
   parseYAML,
   removeService,
+  removeProperty,
   saveYAML,
   update,
 } = require('../lib/compose');
@@ -251,6 +252,148 @@ describe('Joiner', () => {
 
       it('should remove unwanted service', () => {
         expect(removeService(parseYAML('myYAMLFile.yml'), 'myOtherService')).to.deep.equals({
+          version: '2',
+          services: {
+            myService: {
+              name: 'hello',
+            },
+          },
+        });
+      });
+    });
+  });
+
+  describe('Remove Service property', () => {
+    describe('when version 1', () => {
+      describe('when service does not exist', () => {
+        before(() => sinon.stub(yaml, 'load').returns({
+          myService: {
+            name: 'hello',
+            volumes: [
+              '~/data:/var/data',
+            ],
+          },
+        }));
+        after(() => yaml.load.restore());
+
+        it('should do nothing', () => {
+          expect(removeProperty(parseYAML('myYAMLFile.yml'), 'myOtherService', 'volumes')).to.deep.equals({
+            myService: {
+              name: 'hello',
+              volumes: [
+                '~/data:/var/data',
+              ],
+            },
+          });
+        });
+      });
+
+      describe('when service does exist but the property does not', () => {
+        before(() => sinon.stub(yaml, 'load').returns({
+          myService: {
+            name: 'hello',
+          },
+        }));
+        after(() => yaml.load.restore());
+
+        it('should do nothing', () => {
+          expect(removeProperty(parseYAML('myYAMLFile.yml'), 'myService', 'volumes')).to.deep.equals({
+            myService: {
+              name: 'hello',
+            },
+          });
+        });
+      });
+
+      describe('when service and property does exist', () => {
+        before(() => sinon.stub(yaml, 'load').returns({
+          myService: {
+            name: 'hello',
+            volumes: [
+              '~/data:/var/data',
+            ],
+          },
+        }));
+        after(() => yaml.load.restore());
+
+        it('should remove unwanted property', () => {
+          expect(removeProperty(parseYAML('myYAMLFile.yml'), 'myService', 'volumes')).to.deep.equals({
+            myService: {
+              name: 'hello',
+            },
+          });
+        });
+      });
+    });
+
+    describe('when service does not exist', () => {
+      before(() => sinon.stub(yaml, 'load').returns({
+        version: '2',
+        services: {
+          myService: {
+            name: 'hello',
+            volumes: [
+              '~/data:/var/data',
+            ],
+          },
+        },
+      }));
+      after(() => yaml.load.restore());
+
+      it('should do nothing', () => {
+        expect(removeProperty(parseYAML('myYAMLFile.yml'), 'myOtherService', 'volumes')).to.deep.equals({
+          version: '2',
+          services: {
+            myService: {
+              name: 'hello',
+              volumes: [
+                '~/data:/var/data',
+              ],
+            },
+          },
+        });
+      });
+    });
+
+    describe('when service does exist but the property does not', () => {
+      before(() => sinon.stub(yaml, 'load').returns({
+        version: '2',
+        services: {
+          myService: {
+            name: 'hello',
+          },
+        },
+      }));
+      after(() => yaml.load.restore());
+
+      it('should do nothing', () => {
+        expect(removeProperty(parseYAML('myYAMLFile.yml'), 'myService', 'volumes')).to.deep.equals({
+          version: '2',
+          services: {
+            myService: {
+              name: 'hello',
+            },
+          },
+        });
+      });
+    });
+
+    describe('when service and property does exist', () => {
+      before(() => sinon.stub(yaml, 'load').returns({
+        version: '2',
+        services: {
+          myService: {
+            name: 'hello',
+            volumes: [
+              '~/data:/var/data',
+            ],
+          },
+        },
+      }));
+      after(() => yaml.load.restore());
+
+      it('should remove unwanted property', () => {
+        expect(removeProperty(parseYAML('myYAMLFile.yml'), 'myService', 'volumes')).to.deep.equals({
           version: '2',
           services: {
             myService: {

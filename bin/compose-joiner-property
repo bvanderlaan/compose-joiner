@@ -1,0 +1,55 @@
+#!/usr/bin/env node
+
+const cli = require('commander');
+const { version } = require('../package.json');
+const { addService, getService, removeProperty } = require('../lib/compose');
+const { read: readFromTerminal, write: writeToTerminal } = require('../lib/terminal');
+
+function deleteProperty(json, serviceName, propertyName) {
+  return JSON.stringify(removeProperty(json, serviceName, propertyName));
+}
+
+function convertToJSON(value) {
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return value;
+  }
+}
+
+function updateProperty(json, serviceName, propertyName, value) {
+  const service = getService(json, serviceName);
+  service[propertyName] = convertToJSON(value);
+
+  const s = {};
+  s[serviceName] = service;
+
+  return JSON.stringify(addService(json, s));
+}
+
+cli.version(version)
+  .usage('property <service-name> <property> <docker-compose json>')
+  .description('Removes the service from the JSON blob')
+  .option('-D, --remove', 'Delete the property')
+  .option('-a, --add [value]', 'The new value to assign the property')
+  .action((serviceName, propertyName, composeData, options) => {
+    try {
+      const json = JSON.parse(readFromTerminal(composeData));
+      if (options.remove) {
+        // eslint-disable-next-line no-console
+        console.log(writeToTerminal(deleteProperty(json, serviceName, propertyName)));
+      } else if (options.add) {
+        // eslint-disable-next-line no-console
+        console.log(writeToTerminal(updateProperty(json, serviceName, propertyName, options.add)));
+      } else {
+        const service = getService(json, serviceName);
+        // eslint-disable-next-line no-console
+        console.log(`  ${serviceName}.${propertyName} = ${JSON.stringify(service[propertyName])}`);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`Error: Failed to read service property: ${e.message}`);
+      process.exit(-1);
+    }
+  })
+  .parse(process.argv);

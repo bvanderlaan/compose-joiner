@@ -54,6 +54,51 @@ compose-joiner [parse|update|remove] <path to compose file | json blob of compos
   | xargs compose-joiner save docker-compose.master.yml
 ```
 
+
+#### Adding Property to Service
+
+The CLI has a command for adding or updating a property on a service: `compose-joiner property`.
+
+The command takes three arguments and has two optional flags.
+```
+  compose-joiner property <service-name> <property-name> <compose-blob>
+  compose-joiner property <service-name> <property-name> <compose-blob> -D|--remove
+  compose-joiner property <service-name> <property-name> <compose-blob> -a|--add <value>
+```
+
+If you call the command with no flags it will display the value of the give property. If the property does not exist it will display `undefined`.
+
+> service-name.property-name = value
+> service-name.property-name = undefined
+
+```
+  compose-joiner parse docker-compose.yml \
+    | xargs compose-joiner property my-service hello
+
+    my-service.hello = 'world'
+```
+
+If you use the `-D` flag or the `--remove` flag it will return a new compose blob which no longer includes the property on the selected service.
+
+```
+  compose-joiner parse docker-compose.yml \
+    | xargs compose-joiner property my-service hello -D
+```
+
+If you use the `-a` or `--add` flag it will _update_ the value of the property of the given service or add it if the property does not already exist.
+
+```
+  compose-joiner parse docker-compose.yml \
+    | xargs compose-joiner property my-service hello --add 42
+```
+
+To add a JSON array you need to escape the quotation characters otherwise it will be read in as a string.
+
+```
+  compose-joiner parse docker-compose.yml \
+    | xargs compose-joiner property my-service hello --add [\"42:42\"]
+```
+
 ## Running Tests
 
 To run the tests suite use the `npm test` command.
