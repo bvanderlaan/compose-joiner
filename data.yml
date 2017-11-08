@@ -1,0 +1,42 @@
+version: '2.2'
+services:
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /etc/nginx/conf.d
+  dnsmasq:
+    image: andyshinn/dnsmasq
+    ports:
+      - "192.168.99.100:53:53/tcp"
+      - "192.168.99.100:53:53/udp"
+    cap_add:
+      - NET_ADMIN
+    command: --address=/local/192.168.99.100
+    restart: always
+  redis:
+    image: redis:2.8.13
+    ports:
+    - "6379:6379"
+    volumes:
+    - /var/docker/redis:/data
+  zookeeper:
+    image: jplock/zookeeper:3.4.6
+    ports:
+      - "2181:2181"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+  kafka:
+    image: wurstmeister/kafka:0.9.0.1
+    ports:
+      - "9092"
+    links:
+      - zookeeper:zookeeper
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper
+      - HOSTNAME_COMMAND="route -n | awk '/UG[ \t]/{print $$2}'"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

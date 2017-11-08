@@ -1,0 +1,8 @@
+version: '2.2'
+services:
+  my-service:
+    image: myservice:latest
+    ports:
+      - "8080:80"
+    environment:
+      - COMMAND="route -n | awk '/UG[ \t]/{print $$2}'"

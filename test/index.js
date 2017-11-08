@@ -1,8 +1,11 @@
 'use strict';
 
+const Promise = require('bluebird');
 const chai = require('chai');
 const { stripIndent } = require('common-tags');
+const { execAsync } = Promise.promisifyAll(require('child_process'));
 const fs = require('fs');
+const path = require('path');
 const sinon = require('sinon');
 const sinonChai = require('sinon-chai');
 
@@ -664,15 +667,229 @@ describe('Joiner', () => {
   describe('Terminal', () => {
     describe('Read', () => {
       it('should replace single quotes with double quotes', () => {
-        expect(terminal.read("{'services':{'nginx':{'name':'hello'}}}"))
-          .to.equals('{"services":{"nginx":{"name":"hello"}}}');
+        expect(terminal.read('\'{"services":{"nginx":{"name":"hello"}}}\''))
+          .to.equals('\'{"services":{"nginx":{"name":"hello"}}}\'');
       });
     });
 
     describe('Write', () => {
       it('should replace double quotes with single quotes and wrap in double quotes', () => {
-        expect(terminal.write('{"services":{"nginx":{"name":"hello"}}}'))
-          .to.equals('"{\'services\':{\'nginx\':{\'name\':\'hello\'}}}"');
+        expect(terminal.write('{"services":{"nginx":{"name":"hello","command":""route -n | awk \'/UG[ \\t]/{print $$2}\'""}}}'))
+          .to.equals('\'{"services":{"nginx":{"name":"hello","command":""route -n | awk \'"\'"\'/UG[ \\t]/{print $$2}\'"\'"\'""}}}\'');
+      });
+    });
+  });
+
+  describe(':: Integration ::', () => {
+    describe('CLI ::', () => {
+      describe('Parse', () => {
+        it('should read in the YAML', () => {
+          const joiner = path.resolve('bin/compose-joiner');
+          const data = path.resolve('data1.yml');
+
+          return execAsync(`${joiner} parse ${data}`)
+            .then((stdout) => {
+              expect(stdout).to.exist.and.not.be.empty;
+
+              // Because the strings I'm comparing has both single and double quotes I'm opting
+              // to use string template syntax so that I don't have to escape so much muddling
+              // up the assertion. Its not how you should use string templates I know but I think
+              // its better then the alternative in this case.
+
+              // eslint-disable-next-line quotes
+              expect(stdout).to.equal(`'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]}}}'\n`);
+            });
+        });
+
+        it('should print out property when piped through xargs', () => {
+          const joiner = path.resolve('bin/compose-joiner');
+          const data = path.resolve('data1.yml');
+
+          return execAsync(`${joiner} parse ${data} | xargs echo`)
+            .then((stdout) => {
+              expect(stdout).to.exist.and.not.be.empty;
+              // eslint-disable-next-line quotes
+              expect(stdout).to.equal(`{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '/UG[ \\\\t]/{print $$2}'\\""]}}}\n`);
+            });
+        });
+      });
+
+      describe('Remove', () => {
+        it('should remove the service', () => {
+          const joiner = path.resolve('bin/compose-joiner');
+          // eslint-disable-next-line quotes
+          const composeData = `'{"version":"2.2","services":{"nginx":{"image":"nginx","ports":["80:80","443:443"],"volumes":["/var/run/docker.sock:/tmp/docker.sock:ro","/etc/nginx/conf.d"]},"dnsmasq":{"image":"andyshinn/dnsmasq","ports":["192.168.99.100:53:53/tcp","192.168.99.100:53:53/udp"],"cap_add":["NET_ADMIN"],"command":"--address=/local/192.168.99.100","restart":"always"},"redis":{"image":"redis:2.8.13","ports":["6379:6379"],"volumes":["/var/docker/redis:/data"]},"zookeeper":{"image":"jplock/zookeeper:3.4.6","ports":["2181:2181"],"volumes":["/var/run/docker.sock:/var/run/docker.sock:ro"]},"kafka":{"image":"wurstmeister/kafka:0.9.0.1","ports":["9092"],"links":["zookeeper:zookeeper"],"environment":["KAFKA_ZOOKEEPER_CONNECT=zookeeper","HOSTNAME_COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""],"volumes":["/var/run/docker.sock:/var/run/docker.sock"]}}}'`;
+
+          return execAsync(`${joiner} remove nginx ${composeData}`)
+            .then((stdout) => {
+              expect(stdout).to.exist.and.not.be.empty;
+              // eslint-disable-next-line quotes
+              expect(stdout).to.equal(`'{"version":"2.2","services":{"dnsmasq":{"image":"andyshinn/dnsmasq","ports":["192.168.99.100:53:53/tcp","192.168.99.100:53:53/udp"],"cap_add":["NET_ADMIN"],"command":"--address=/local/192.168.99.100","restart":"always"},"redis":{"image":"redis:2.8.13","ports":["6379:6379"],"volumes":["/var/docker/redis:/data"]},"zookeeper":{"image":"jplock/zookeeper:3.4.6","ports":["2181:2181"],"volumes":["/var/run/docker.sock:/var/run/docker.sock:ro"]},"kafka":{"image":"wurstmeister/kafka:0.9.0.1","ports":["9092"],"links":["zookeeper:zookeeper"],"environment":["KAFKA_ZOOKEEPER_CONNECT=zookeeper","HOSTNAME_COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""],"volumes":["/var/run/docker.sock:/var/run/docker.sock"]}}}'\n`);
+            });
+        });
+
+        it('should print out property when piped through xargs', () => {
+          const joiner = path.resolve('bin/compose-joiner');
+          // eslint-disable-next-line quotes
+          const composeData = `'{"version":"2.2","services":{"nginx":{"image":"nginx","ports":["80:80","443:443"],"volumes":["/var/run/docker.sock:/tmp/docker.sock:ro","/etc/nginx/conf.d"]},"dnsmasq":{"image":"andyshinn/dnsmasq","ports":["192.168.99.100:53:53/tcp","192.168.99.100:53:53/udp"],"cap_add":["NET_ADMIN"],"command":"--address=/local/192.168.99.100","restart":"always"},"redis":{"image":"redis:2.8.13","ports":["6379:6379"],"volumes":["/var/docker/redis:/data"]},"zookeeper":{"image":"jplock/zookeeper:3.4.6","ports":["2181:2181"],"volumes":["/var/run/docker.sock:/var/run/docker.sock:ro"]},"kafka":{"image":"wurstmeister/kafka:0.9.0.1","ports":["9092"],"links":["zookeeper:zookeeper"],"environment":["KAFKA_ZOOKEEPER_CONNECT=zookeeper","HOSTNAME_COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""],"volumes":["/var/run/docker.sock:/var/run/docker.sock"]}}}'`;
+
+          return execAsync(`${joiner} remove nginx ${composeData} | xargs echo`)
+            .then((stdout) => {
+              expect(stdout).to.exist.and.not.be.empty;
+              // eslint-disable-next-line quotes
+              expect(stdout).to.equal(`{"version":"2.2","services":{"dnsmasq":{"image":"andyshinn/dnsmasq","ports":["192.168.99.100:53:53/tcp","192.168.99.100:53:53/udp"],"cap_add":["NET_ADMIN"],"command":"--address=/local/192.168.99.100","restart":"always"},"redis":{"image":"redis:2.8.13","ports":["6379:6379"],"volumes":["/var/docker/redis:/data"]},"zookeeper":{"image":"jplock/zookeeper:3.4.6","ports":["2181:2181"],"volumes":["/var/run/docker.sock:/var/run/docker.sock:ro"]},"kafka":{"image":"wurstmeister/kafka:0.9.0.1","ports":["9092"],"links":["zookeeper:zookeeper"],"environment":["KAFKA_ZOOKEEPER_CONNECT=zookeeper","HOSTNAME_COMMAND=\\"route -n | awk '/UG[ \\\\t]/{print $$2}'\\""],"volumes":["/var/run/docker.sock:/var/run/docker.sock"]}}}\n`);
+            });
+        });
+
+        it('should remove the service when piped to from parse command', () => {
+          const joiner = path.resolve('bin/compose-joiner');
+          const data = path.resolve('data.yml');
+
+          return execAsync(`${joiner} parse ${data}`)
+            .then((stdout) => {
+              expect(stdout).to.exist.and.not.be.empty;
+              return execAsync(`${joiner} remove nginx ${stdout}`);
+            })
+            .then((stdout) => {
+              expect(stdout).to.exist.and.not.be.empty;
+              // eslint-disable-next-line quotes
+              expect(stdout).to.equal(`'{"version":"2.2","services":{"dnsmasq":{"image":"andyshinn/dnsmasq","ports":["192.168.99.100:53:53/tcp","192.168.99.100:53:53/udp"],"cap_add":["NET_ADMIN"],"command":"--address=/local/192.168.99.100","restart":"always"},"redis":{"image":"redis:2.8.13","ports":["6379:6379"],"volumes":["/var/docker/redis:/data"]},"zookeeper":{"image":"jplock/zookeeper:3.4.6","ports":["2181:2181"],"volumes":["/var/run/docker.sock:/var/run/docker.sock:ro"]},"kafka":{"image":"wurstmeister/kafka:0.9.0.1","ports":["9092"],"links":["zookeeper:zookeeper"],"environment":["KAFKA_ZOOKEEPER_CONNECT=zookeeper","HOSTNAME_COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""],"volumes":["/var/run/docker.sock:/var/run/docker.sock"]}}}'\n`);
+            });
+        });
+      });
+
+      describe('Property', () => {
+        describe('Get', () => {
+          it('should print out property', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            // eslint-disable-next-line quotes
+            const composeData = `'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]}}}'`;
+
+            return execAsync(`${joiner} property my-service environment ${composeData}`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`  my-service.environment = '["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]'\n`);
+              });
+          });
+
+          it('should print out properly when piped to xargs', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            // eslint-disable-next-line quotes
+            const composeData = `'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]}}}'`;
+
+            return execAsync(`${joiner} property my-service environment ${composeData} | xargs echo`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`my-service.environment = ["COMMAND=\\"route -n | awk '/UG[ \\\\t]/{print $$2}'\\""]\n`);
+              });
+          });
+
+          it('should print out property when piped to from parse command', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            const data = path.resolve('data1.yml');
+
+            return execAsync(`${joiner} parse ${data}`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                return execAsync(`${joiner} property my-service environment ${stdout}`);
+              })
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`  my-service.environment = '["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]'\n`);
+              });
+          });
+        });
+
+        describe('Update', () => {
+          it('should update property', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            // eslint-disable-next-line quotes
+            const composeData = `'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]}}}'`;
+
+            return execAsync(`${joiner} property my-service environment ${composeData} --add [\\"8080:80\\"]`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["8080:80"]}}}'\n`);
+              });
+          });
+
+          it('should print out property when piped through xargs', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            // eslint-disable-next-line quotes
+            const composeData = `'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]}}}'`;
+
+            return execAsync(`${joiner} property my-service environment ${composeData} --add [\\"8080:80\\"] | xargs echo`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["8080:80"]}}}\n`);
+              });
+          });
+
+          it('should update property when piped to from parse command', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            const data = path.resolve('data1.yml');
+
+            return execAsync(`${joiner} parse ${data}`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                return execAsync(`${joiner} property my-service environment --add [\\"8080:80\\"] ${stdout}`);
+              })
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["8080:80"]}}}'\n`);
+              });
+          });
+        });
+
+        describe('Remove', () => {
+          it('should remove property', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            // eslint-disable-next-line quotes
+            const composeData = `'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]}}}'`;
+
+            return execAsync(`${joiner} property my-service environment ${composeData} -D`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"]}}}'\n`);
+              });
+          });
+
+          it('should print out property when piped through xargs', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            // eslint-disable-next-line quotes
+            const composeData = `'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"],"environment":["COMMAND=\\"route -n | awk '"'"'/UG[ \\\\t]/{print $$2}'"'"'\\""]}}}'`;
+
+            return execAsync(`${joiner} property my-service environment ${composeData} -D | xargs echo`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"]}}}\n`);
+              });
+          });
+
+          it('should remove property when piped to from parse command', () => {
+            const joiner = path.resolve('bin/compose-joiner');
+            const data = path.resolve('data1.yml');
+
+            return execAsync(`${joiner} parse ${data}`)
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                return execAsync(`${joiner} property my-service environment -D ${stdout}`);
+              })
+              .then((stdout) => {
+                expect(stdout).to.exist.and.not.be.empty;
+                // eslint-disable-next-line quotes
+                expect(stdout).to.equal(`'{"version":"2.2","services":{"my-service":{"image":"myservice:latest","ports":["8080:80"]}}}'\n`);
+              });
+          });
+        });
       });
     });
   });
